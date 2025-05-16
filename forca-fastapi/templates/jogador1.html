@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Jogador 1 - Enviar Palavra</title>
+  <style>
+    body {
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      color: white;
+      font-family: 'Courier New', Courier, monospace;
+      text-align: center;
+      margin: 0;
+      padding: 2em;
+    }
+
+    h1,
+    h2 {
+      margin-bottom: 1em;
+    }
+
+    input[type="text"] {
+      font-size: 20px;
+      padding: 8px;
+      border-radius: 5px;
+      border: none;
+      text-align: center;
+      width: 250px;
+    }
+
+    button {
+      background: #abdcf1;
+      border: none;
+      border-radius: 20px;
+      font-size: 18px;
+      margin-left: 10px;
+      padding: 8px 16px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #90c7e3;
+    }
+
+    #letras_erradas {
+      color: red;
+      font-weight: bold;
+    }
+
+    #progressoTitle {
+      margin-top: 50px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Jogador 1 👤</h1>
+
+  <!-- Campo para digitar a palavra -->
+  <input type="text" id="palavra" placeholder="Ex: abacaxi" maxlength="20" autocomplete="off">
+  <button id="btnEnviar" onclick="enviarPalavra()">Enviar</button>
+
+  <!-- Área que mostra o andamento do jogo do jogador 2 -->
+  <h2 id="progressoTitle">Progresso do Jogador 2:</h2>
+  <p id="progresso">Aguardando início do jogo...</p>
+  <p id="letras_erradas"></p>
+
+  <script>
+    // Estabelece conexão WebSocket com o backend
+    const ws = new WebSocket(`ws://${location.host}/ws/jogador1`);
+
+    // Função que envia a palavra secreta ao servidor
+    function enviarPalavra() {
+      const palavraInput = document.getElementById("palavra");
+      const palavra = palavraInput.value.trim().toLowerCase();
+
+      // Validação: evitar envio de campo vazio ou apenas espaços
+      if (palavra && /^[a-zA-ZçÇãõáéíóúâêîôûàèìòù]+$/i.test(palavra)) {
+        ws.send(JSON.stringify({ type: "palavra", palavra }));
+
+        // Desativa o botão para evitar múltiplos envios
+        document.getElementById("btnEnviar").disabled = true;
+
+        // Mostra os traços no progresso
+        document.getElementById("progresso").textContent = "_ ".repeat(palavra.length).trim();
+        document.getElementById("letras_erradas").textContent = "";
+      } else {
+        alert("Digite uma palavra válida (somente letras).");
+      }
+    }
+
+    // Recebe atualizações do servidor via WebSocket
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      if (data.type === "jogo") {
+        // Atualiza letras certas
+        if (data.letras_certas) {
+          document.getElementById("progresso").textContent = data.letras_certas.split('').join(' ');
+        }
+
+        // Atualiza letras erradas
+        if (data.letras_erradas !== undefined) {
+          const erros = data.letras_erradas.split('').join(' ');
+          document.getElementById("letras_erradas").textContent = erros ? `Erradas: ${erros}` : "";
+        }
+
+        // Fim de jogo
+        if (data.status === "ganhou" || data.status === "perdeu") {
+          document.getElementById("btnEnviar").disabled = false;
+          document.getElementById("palavra").value = "";
+
+          alert(`Resultado: ${data.status.toUpperCase()}\nO jogo terminou! Você pode enviar uma nova palavra.`);
+
+          document.getElementById("progresso").textContent = "Aguardando início do jogo...";
+          document.getElementById("letras_erradas").textContent = "";
+        }
+      }
+    };
+  </script>
+</body>
+
+</html>
