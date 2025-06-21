@@ -62,9 +62,12 @@
   <button id="btnEnviar" onclick="enviarPalavra()">Enviar</button>
 
   <!-- Área que mostra o andamento do jogo do jogador 2 -->
-  <h2 id="progressoTitle">Progresso do Jogador 2:</h2>
+  <h2 id="progressoTitle">Progresso do Jogo:</h2>
   <p id="progresso">Aguardando início do jogo...</p>
   <p id="letras_erradas"></p>
+
+  <p id="resultado_jogo" style="font-weight:bold; margin-top: 20px;"></p>
+
 
   <script>
     // Estabelece conexão WebSocket com o backend
@@ -107,15 +110,30 @@
         }
 
         // Fim de jogo
-        if (data.status === "ganhou" || data.status === "perdeu") {
+
+        const resultadoEl = document.getElementById("resultado_jogo");
+
+        if (data.status === "jogador2_ganhou" || data.status === "jogador3_ganhou") {
+          let vencedor = data.status === "jogador2_ganhou" ? "Jogador 2" : "Jogador 3";
+
+          resultadoEl.textContent = `Fim de jogo! ${vencedor} venceu! A palavra era: ${data.palavra}`;
+
           document.getElementById("btnEnviar").disabled = false;
           document.getElementById("palavra").value = "";
-
-          alert(`Resultado: ${data.status.toUpperCase()}\nO jogo terminou! Você pode enviar uma nova palavra.`);
-
           document.getElementById("progresso").textContent = "Aguardando início do jogo...";
           document.getElementById("letras_erradas").textContent = "";
+        } else if (data.status === "perdeu") {
+          resultadoEl.textContent = "Fim de jogo! Todos perderam!";
+
+          document.getElementById("btnEnviar").disabled = false;
+          document.getElementById("palavra").value = "";
+          document.getElementById("progresso").textContent = "Aguardando início do jogo...";
+          document.getElementById("letras_erradas").textContent = "";
+        } else {
+          resultadoEl.textContent = "";
         }
+
+
       }
     };
   </script>

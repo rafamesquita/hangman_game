@@ -15,6 +15,7 @@ letras_erradas = []
 tentativas = 6
 jogador1_ws = None
 jogador2_ws = None
+jogador3_ws = None
 
 # Rota para jogador 1
 @app.get("/jogador1", response_class=HTMLResponse)
@@ -40,8 +41,10 @@ async def websocket_jogador1(ws: WebSocket):
                 letras_certas = ["_" for _ in palavra_secreta] # Inicializa o jogo (reseta as variáveis)
                 letras_erradas = []
                 tentativas = 6
-                if jogador2_ws:
-                    await jogador2_ws.send_json({"type": "inicio"}) # Envia um sinal para o jogador 2 que o jogo começou
+                for jogador_ws in [jogador2_ws, jogador3_ws]:
+                    if jogador_ws:
+                        await jogador_ws.send_json({"type": "inicio"})
+
     except:
         jogador1_ws = None
 
@@ -55,35 +58,64 @@ async def websocket_jogador2(ws: WebSocket):
         while True:
             data = await ws.receive_json() # Recebe uma letra do jogador 2
             if data["type"] == "letra":
-                letra = data["letra"].lower()
-                resultado = "continua"
-                if letra in palavra_secreta: # Se a letra estiver na palavra: Atualiza letras_certas com a letra nas posições corretas.
-                    for i, l in enumerate(palavra_secreta):
-                        if l == letra:
-                            letras_certas[i] = letra
-                else: # Se não estiver: Adiciona a letra em letras_erradas (se ainda não estiver lá). Decrementa tentativas
-                    if letra not in letras_erradas:
-                        letras_erradas.append(letra)
-                        global tentativas
-                        tentativas -= 1
-
-                if "_" not in letras_certas: # Verifica o status do jogo
-                    resultado = "ganhou"
-                elif tentativas <= 0:
-                    resultado = "perdeu"
-
-                # Envia a atualização para os dois jogadores
-                msg = {
-                    "type": "jogo",
-                    "letras_certas": "".join(letras_certas),
-                    "letras_erradas": "".join(letras_erradas),
-                    "tentativas": tentativas,
-                    "status": resultado,
-                    "palavra": palavra_secreta
-                }
-                if jogador2_ws:
-                    await jogador2_ws.send_json(msg)
-                if jogador1_ws:
-                    await jogador1_ws.send_json(msg)
+                await processar_letra(data["letra"].lower(), jogador="jogador2") # Processa a letra recebida
     except:
         jogador2_ws = None
+
+@app.get("/jogador3", response_class=HTMLResponse)
+async def jogador3(request: Request):
+    return templates.TemplateResponse("jogador3.html", {"request": request})
+
+@app.websocket("/ws/jogador3")
+async def websocket_jogador3(ws: WebSocket):
+    global jogador3_ws
+    await ws.accept()
+    jogador3_ws = ws
+    try:
+        while True:
+            data = await ws.receive_json()
+            if data["type"] == "letra":
+                await processar_letra(data["letra"].lower(), jogador="jogador3")
+    except:
+        jogador3_ws = None
+        
+async def processar_letra(letra: str, jogador: str):
+    global tentativas, letras_certas, letras_erradas
+
+    ganhou = False
+    perdeu = False
+
+    if letra in palavra_secreta:
+        for i, l in enumerate(palavra_secreta):
+            if l == letra:
+                letras_certas[i] = letra
+    else:
+        if letra not in letras_erradas:
+            letras_erradas.append(letra)
+            tentativas -= 1
+
+    if "_" not in letras_certas:
+        ganhou = True
+    elif tentativas <= 0:
+        perdeu = True
+
+    status = "continua"
+    if ganhou:
+        status = f"{jogador}_ganhou"
+    elif perdeu:
+        status = "perdeu"
+
+    msg = {
+        "type": "jogo",
+        "letras_certas": "".join(letras_certas),
+        "letras_erradas": "".join(letras_erradas),
+        "tentativas": tentativas,
+        "status": status,
+        "palavra": palavra_secreta
+    }
+
+    # Enviar atualização para todos
+    for jogador_ws in [jogador1_ws, jogador2_ws, jogador3_ws]:
+        if jogador_ws:
+            await jogador_ws.send_json(msg)
+

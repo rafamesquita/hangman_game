@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>Jogador 2 - Adivinhar</title>
+  <title>Jogador 3 - Adivinhar</title>
   <style>
     body {
       background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
@@ -44,7 +44,7 @@
 </head>
 
 <body>
-  <h1>Jogador 2 🎮</h1>
+  <h1>Jogador 3 🎮</h1>
   <div id="jogo" style="display:none;">
     <p id="letras_certas">____</p>
     <p id="tentativas">Tentativas: 6</p>
@@ -56,7 +56,7 @@
 
   <script>
     // Estabelece uma conexão WebSocket com o backend (jogador 2)
-    const ws = new WebSocket(`ws://${location.host}/ws/jogador2`);
+    const ws = new WebSocket(`ws://${location.host}/ws/jogador3`);
 
     // Variável para contar tentativas erradas
     let tentativasErradas = 0;
@@ -82,17 +82,17 @@
 
         // Verifica se o jogador ganhou
         if (msg.status === "jogador2_ganhou" || msg.status === "jogador3_ganhou") {
-          const vencedor = msg.status === "jogador2_ganhou" ? "Jogador 2" : "Jogador 3";
-          const perdeu = (vencedor === "Jogador 2" && location.pathname.includes("jogador3")) ||
+        const vencedor = msg.status === "jogador2_ganhou" ? "Jogador 2" : "Jogador 3";
+        const perdeu = (vencedor === "Jogador 2" && location.pathname.includes("jogador3")) ||
                         (vencedor === "Jogador 3" && location.pathname.includes("jogador2"));
-          
-          setTimeout(() => {
+        
+        setTimeout(() => {
             alert(perdeu
-              ? `😞 Você perdeu! ${vencedor} venceu!\nA palavra era: ${msg.palavra}`
-              : `🎉 Você venceu!\nA palavra era: ${msg.palavra}`);
+            ? `😞 Você perdeu! ${vencedor} venceu!\nA palavra era: ${msg.palavra}`
+            : `🎉 Você venceu!\nA palavra era: ${msg.palavra}`);
             document.getElementById("jogo").style.display = "none";
             resetarTela();
-          }, 500);
+        }, 500);
         }
 
 
