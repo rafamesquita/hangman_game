@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>Jogador 2 - Adivinhar</title>
+  <title>Jogador 3 - Adivinhar</title>
   <style>
     body {
       background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
@@ -44,7 +44,7 @@
 </head>
 
 <body>
-  <h1>Jogador 2 🎮</h1>
+  <h1>Jogador 3 🎮</h1>
   <div id="jogo" style="display:none;">
     <p id="letras_certas">____</p>
     <p id="tentativas">Tentativas: 6</p>
@@ -55,55 +55,38 @@
   </div>
 
   <script>
-    // Estabelece uma conexão WebSocket com o backend (jogador 2)
-    const ws = new WebSocket(`ws://${location.host}/ws/jogador2`);
-
-    // Variável para contar tentativas erradas
+    const ws = new WebSocket(`ws://${location.host}/ws/jogador3`);
     let tentativasErradas = 0;
-
-    // Armazena a última mensagem recebida do servidor
     let msgGlobal = null;
-    let turnoAtual = ""; 
+    let turnoAtual = "";
 
-    // Lida com as mensagens recebidas do servidor via WebSocket
     ws.onmessage = (event) => {
       const msg = JSON.parse(event.data);
       msgGlobal = msg;
 
-      if (msg.turno) {
-        turnoAtual = msg.turno;
-        atualizarTurno();
-      }
-
       if (msg.type === "inicio") {
-        // Se o jogo estiver começando
         resetarTela();
         document.getElementById("jogo").style.display = "block";
         atualizarTurno();
-
       } else if (msg.type === "jogo") {
-        // Atualiza letras corretas, erradas e tentativas
         document.getElementById("letras_certas").textContent = msg.letras_certas.split('').join(' ');
         document.getElementById("letras_erradas").textContent = msg.letras_erradas;
         document.getElementById("tentativas").textContent = "Tentativas: " + msg.tentativas;
 
-        // Verifica se o jogador ganhou
-        if (msg.status === "ganhou" && msg.vencedor === "jogador2") {
+        if (msg.status === "ganhou" && msg.vencedor === "jogador3") {
           atualizarImagemForca(6 - msg.tentativas);
           setTimeout(() => {
             alert("🎉 Você venceu! A palavra era: " + msg.palavra);
             document.getElementById("jogo").style.display = "none";
             resetarTela();
-          }, 500); // 500ms de atraso
-
-        }
-        else  {
+          }, 500);
+        } else {
           atualizarImagemForca(6 - msg.tentativas);
           setTimeout(() => {
             alert("💀 Você perdeu! A palavra era: " + msg.palavra);
             document.getElementById("jogo").style.display = "none";
             resetarTela();
-          }, 500); // 500ms de atraso
+          }, 500);
         }
 
         if (msg.turno) {
@@ -111,20 +94,15 @@
           atualizarTurno();
         }
 
-        // Atualiza a imagem da forca com base nas tentativas erradas
         atualizarImagemForca(6 - msg.tentativas);
       }
     };
 
-    // Função chamada ao tentar adivinhar uma letra
     function tentarLetra() {
       const letra = document.getElementById("letra").value;
       if (letra) {
-        // Envia a letra para o servidor
         ws.send(JSON.stringify({ type: "letra", letra }));
         document.getElementById("letra").value = "";
-
-        // Incrementa tentativas erradas se a letra não estiver na palavra
         if (!msgGlobal.palavra.includes(letra)) {
           tentativasErradas++;
         }
@@ -135,8 +113,7 @@
       const input = document.getElementById("letra");
       const botao = document.querySelector("button");
 
-      // Verifica se é o turno do Jogador 2
-      if (turnoAtual === "jogador2") {
+      if (turnoAtual === "jogador3") {
         input.disabled = false;
         botao.disabled = false;
         botao.textContent = "Tentar (Seu turno)";
@@ -147,9 +124,7 @@
       }
     }
 
-    // Atualiza o desenho da forca conforme o número de tentativas erradas
     function atualizarImagemForca(tentativasErradas) {
-      // Array com as imagens em SVG da forca (em estágios)
       const forcaImagens = [
         `<svg width="110" height="174" viewBox="0 0 110 174" fill="none" xmlns="http://www.w3.org/2000/svg">
         <line x1="28.5" y1="172.991" x2="29.5" y2="2.99117" stroke="black" stroke-width="3" />
@@ -215,15 +190,10 @@
         <line x1="38.4157" y1="75.1885" x2="63.4157" y2="57.1885" stroke="#D9D9D9" stroke-width="2" />
       </svg>`
       ];
-
-      // Seleciona a imagem correspondente à quantidade de erros
       const imagem = forcaImagens[Math.min(tentativasErradas, forcaImagens.length - 1)];
-
-      // Exibe a imagem atual da forca
       document.getElementById("forca_imagem").innerHTML = imagem;
     }
 
-    // Reinicia a interface do jogo
     function resetarTela() {
       document.getElementById("letras_certas").textContent = "____";
       document.getElementById("letras_erradas").textContent = "";
