@@ -2,53 +2,49 @@
 <html lang="pt">
   <head>
     <meta charset="UTF-8" />
-    <title>Jogador 1 - Enviar Palavra</title>
+    <title>Jogador 3 - Adivinhar</title>
     <style>
       body {
         background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
         color: white;
         font-family: 'Courier New', Courier, monospace;
         text-align: center;
-        margin: 0;
-        padding: 2em;
+        align-items: center;
       }
       
-      h1,
-      h2 {
-        margin-bottom: 1em;
-      }
-      
-      input[type='text'] {
-        font-size: 20px;
-        padding: 8px;
-        border-radius: 5px;
-        border: none;
-        text-align: center;
-        width: 250px;
-      }
-      
-      button {
-        background: #abdcf1;
-        border: none;
-        border-radius: 20px;
-        font-size: 18px;
-        margin-left: 10px;
-        padding: 8px 16px;
-        cursor: pointer;
-        transition: background 0.3s;
-      }
-      
-      button:hover {
-        background: #90c7e3;
+      #letras_certas {
+        font-size: 40px;
+        margin-bottom: 20px;
       }
       
       #letras_erradas {
         color: red;
-        font-weight: bold;
+        font-size: 30px;
+        margin-top: 20px;
       }
       
-      #progressoTitle {
-        margin-top: 50px;
+      input[type='text'] {
+        font-size: 20px;
+        padding: 5px;
+        width: 50px;
+        text-align: center;
+      }
+      
+      #nome_input[type='text'] {
+        font-size: 20px;
+        padding: 5px;
+        width: 250px;
+        text-align: center;
+      }
+      
+      button {
+        background: #abdcf1;
+        border: #abdcf1;
+        border-radius: 20px;
+        font-size: 18px;
+        margin-left: 10px;
+        padding: 5px 10px;
+        cursor: pointer;
       }
       
       #lista_jogadores {
@@ -60,66 +56,65 @@
   </head>
 
   <body>
-    <h1 id="titulo_jogador">Jogador 1 👤</h1>
+    <h1 id="titulo_jogador">Jogador 3 🎮</h1>
 
     <!-- Tela de login -->
     <div id="login">
       <p>Digite seu nome para entrar:</p>
-      <input type="text" id="nome_input" placeholder="Seu nome" maxlength="20" autocomplete="off" />
+      <input type="text" id="nome_input" placeholder="Seu nome" autocomplete="off" />
       <button onclick="entrarNoJogo()">Entrar</button>
     </div>
 
-    <div id="tela_jogo" style="display:none;">
-      <div style="margin-top: 30px;">
-        <strong>Jogadores conectados:</strong>
-        <ul id="lista_jogadores"></ul>
-      </div>
-
-      <!-- Campo para digitar a palavra -->
-      <input type="text" id="palavra" placeholder="Ex: abacaxi" maxlength="20" autocomplete="off" />
-      <button id="btnEnviar" onclick="enviarPalavra()">Enviar</button>
-
-      <!-- Área que mostra o andamento do jogo do jogador 2 -->
-      <h2 id="progressoTitle">Progresso do Jogo:</h2>
-      <p id="progresso">Aguardando início do jogo...</p>
-      <p id="letras_erradas"></p>
-
-      <div id="forca_imagem" style="margin-top: 20px;"></div>
-
-      <p id="resultado_jogo" style="font-weight:bold; margin-top: 20px;"></p>
+    <div id="aguardando_jogo" style="display:none;">
+      <p>Aguardando início do jogo...</p>
     </div>
+
+    <div style="margin-top: 30px;">
+      <strong>Jogadores conectados:</strong>
+      <ul id="lista_jogadores"></ul>
+    </div>
+
+    <div id="jogo" style="display:none;">
+      <p id="letras_certas">____</p>
+      <p id="tentativas">Erros restantes: 6</p>
+      <p id="letras_erradas"></p>
+      <input type="text" id="letra" maxlength="1" />
+      <button onclick="tentarLetra()">Tentar</button>
+      <div style="margin-top: 50px;" id="forca_imagem"></div>
+    </div>
+
     <script>
-      let ws
-      let nomeUsuario = ''
+      let ws = null
+      let tentativasErradas = 0
+      let msgGlobal = null
       
       function entrarNoJogo() {
-        const nome = document.getElementById('nome_input').value.trim()
-        if (!nome) {
-          alert('Digite um nome válido!')
+        const nomeUsuario = document.getElementById('nome_input').value.trim()
+        if (!nomeUsuario) {
+          alert('Digite um nome para continuar.')
           return
         }
-      
-        nomeUsuario = nome
       
         // Troca o título para o nome real do jogador
         document.getElementById('titulo_jogador').textContent = nomeUsuario
       
-        // Esconde login e mostra tela do jogo
+        // Oculta login e mostra a tela de aguardando
         document.getElementById('login').style.display = 'none'
-        document.getElementById('tela_jogo').style.display = 'block'
+        document.getElementById('aguardando_jogo').style.display = 'block'
       
-        // Conecta WebSocket
-        ws = new WebSocket(`wss://${location.host}/ws/jogador1`)
+        // Conecta ao WebSocket
+        ws = new WebSocket(`wss://${location.host}/ws/jogador3`)
       
         ws.onopen = () => {
           ws.send(JSON.stringify({ type: 'nome', nome: nomeUsuario }))
         }
       
         ws.onmessage = (event) => {
-          const data = JSON.parse(event.data)
+          const msg = JSON.parse(event.data)
+          msgGlobal = msg
       
-          if (data.type === 'error') {
-            alert(data.msg)
+          if (msg.type === 'error') {
+            alert(msg.msg)
             // Mostrar a tela de login para tentar outro nome
             document.getElementById('login').style.display = 'block'
             document.getElementById('tela_jogo').style.display = 'none'
@@ -127,15 +122,12 @@
             return
           }
       
-          if (data.type === 'info') {
-            alert(data.msg)
-            return
-          }
+          if (msg.type === 'info') return
       
-          if (data.type === 'jogadores') {
+          if (msg.type === 'jogadores') {
             const ul = document.getElementById('lista_jogadores')
             ul.innerHTML = ''
-            data.lista.forEach((nome) => {
+            msg.lista.forEach((nome) => {
               const li = document.createElement('li')
               li.textContent = nome
               ul.appendChild(li)
@@ -143,61 +135,54 @@
             return
           }
       
-          if (data.type === 'jogo') {
-            if (data.letras_certas) {
-              document.getElementById('progresso').textContent = data.letras_certas.split('').join(' ')
+          if (msg.type === 'inicio') {
+            resetarTela()
+            document.getElementById('aguardando_jogo').style.display = 'none'
+            document.getElementById('jogo').style.display = 'block'
+          } else if (msg.type === 'jogo') {
+            document.getElementById('jogo').style.display = 'block'
+            document.getElementById('aguardando_jogo').style.display = 'none'
+      
+            document.getElementById('letras_certas').textContent = msg.letras_certas.split('').join(' ')
+            document.getElementById('letras_erradas').textContent = msg.letras_erradas
+            document.getElementById('tentativas').textContent = 'Erros restantes: ' + msg.tentativas
+      
+            if (msg.status === 'jogador2_ganhou' || msg.status === 'jogador3_ganhou') {
+              const vencedor = msg.status === 'jogador2_ganhou' ? 'Jogador 2' : 'Jogador 3'
+              const perdeu = (vencedor === 'Jogador 2' && location.pathname.includes('jogador3')) || (vencedor === 'Jogador 3' && location.pathname.includes('jogador2'))
+              setTimeout(() => {
+                alert(perdeu ? `😞 Você perdeu! ${vencedor} venceu!\nA palavra era: ${msg.palavra}` : `🎉 Você venceu!\nA palavra era: ${msg.palavra}`)
+                document.getElementById('jogo').style.display = 'none'
+                resetarTela()
+              }, 500)
+            } else if (msg.status === 'empate') {
+              setTimeout(() => {
+                alert(`😞 Ninguém venceu! A palavra era: ${msg.palavra}`)
+                document.getElementById('jogo').style.display = 'none'
+                resetarTela()
+              }, 500)
             }
       
-            if (data.letras_erradas !== undefined) {
-              const erros = data.letras_erradas.split('').join(' ')
-              document.getElementById('letras_erradas').textContent = erros ? `Erradas: ${erros}` : ''
-            }
-      
-            const tentativasErradas = 6 - data.tentativas // se 6 é o total de tentativas permitidas
-            atualizarImagemForca(tentativasErradas)
-      
-            const resultadoEl = document.getElementById('resultado_jogo')
-      
-            if (data.status === 'jogador2_ganhou' || data.status === 'jogador3_ganhou') {
-              const vencedor = data.status === 'jogador2_ganhou' ? 'Jogador 2' : 'Jogador 3'
-              resultadoEl.textContent = `Fim de jogo! ${vencedor} venceu! A palavra era: ${data.palavra}`
-              document.getElementById('btnEnviar').disabled = false
-              document.getElementById('palavra').value = ''
-              document.getElementById('progresso').textContent = 'Aguardando início do jogo...'
-              document.getElementById('letras_erradas').textContent = ''
-              document.getElementById('forca_imagem').innerHTML = ''
-            } else if (data.status === 'empate') {
-              resultadoEl.textContent = 'Fim de jogo! Todos perderam!'
-              document.getElementById('btnEnviar').disabled = false
-              document.getElementById('palavra').value = ''
-              document.getElementById('progresso').textContent = 'Aguardando início do jogo...'
-              document.getElementById('letras_erradas').textContent = ''
-              document.getElementById('forca_imagem').innerHTML = ''
-            } else {
-              resultadoEl.textContent = ''
-            }
+            atualizarImagemForca(6 - msg.tentativas)
           }
         }
+      
+        // Oculta login e mostra o jogo
+        document.getElementById('login').style.display = 'none'
       }
       
-      function enviarPalavra() {
-        const resultadoEl = document.getElementById('resultado_jogo')
-        resultadoEl.textContent = '' // limpa o texto do vencedor, se houver
-        const palavraInput = document.getElementById('palavra')
-        const palavra = palavraInput.value.trim().toLowerCase()
+      // Função chamada ao tentar adivinhar uma letra
+      function tentarLetra() {
+        const letra = document.getElementById('letra').value
+        if (letra) {
+          // Envia a letra para o servidor
+          ws.send(JSON.stringify({ type: 'letra', letra }))
+          document.getElementById('letra').value = ''
       
-        // Validação: evitar envio de campo vazio ou apenas espaços
-        if (palavra && /^[a-zA-ZçÇãõáéíóúâêîôûàèìòù]+$/i.test(palavra)) {
-          ws.send(JSON.stringify({ type: 'palavra', palavra }))
-      
-          // Desativa o botão para evitar múltiplos envios
-          document.getElementById('btnEnviar').disabled = true
-      
-          // Mostra os traços no progresso
-          document.getElementById('progresso').textContent = '_ '.repeat(palavra.length).trim()
-          document.getElementById('letras_erradas').textContent = ''
-        } else {
-          alert('Digite uma palavra válida (somente letras).')
+          // Incrementa tentativas erradas se a letra não estiver na palavra
+          if (!msgGlobal.palavra.includes(letra)) {
+            tentativasErradas++
+          }
         }
       }
       
@@ -283,6 +268,7 @@
         document.getElementById('letra').value = ''
         document.getElementById('jogo').style.display = 'none'
         document.getElementById('forca_imagem').innerHTML = ''
+        document.getElementById('aguardando_jogo').style.display = 'block'
       }
     </script>
   </body>
