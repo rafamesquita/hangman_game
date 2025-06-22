@@ -48,9 +48,9 @@
       }
       
       #lista_jogadores {
-        list-style-type: none; /* remove os bullets */
-        padding-left: 0; /* remove o recuo à esquerda */
-        margin-left: 0; /* opcional: remove margem */
+        list-style-type: none;
+        padding-left: 0; 
+        margin-left: 0;
       }
     </style>
   </head>
@@ -58,7 +58,6 @@
   <body>
     <h1 id="titulo_jogador">Jogador 3 🎮</h1>
 
-    <!-- Tela de login -->
     <div id="login">
       <p>Digite seu nome para entrar:</p>
       <input type="text" id="nome_input" placeholder="Seu nome" autocomplete="off" />
@@ -95,15 +94,11 @@
           return
         }
       
-        // Troca o título para o nome real do jogador
         document.getElementById('titulo_jogador').textContent = nomeUsuario
-      
-        // Oculta login e mostra a tela de aguardando
         document.getElementById('login').style.display = 'none'
         document.getElementById('aguardando_jogo').style.display = 'block'
       
-        // Conecta ao WebSocket
-        ws = new WebSocket(`wss://${location.host}/ws/jogador3`)
+        ws = new WebSocket(`ws://${location.host}/ws/jogador3`)
       
         ws.onopen = () => {
           ws.send(JSON.stringify({ type: 'nome', nome: nomeUsuario }))
@@ -115,7 +110,6 @@
       
           if (msg.type === 'error') {
             alert(msg.msg)
-            // Mostrar a tela de login para tentar outro nome
             document.getElementById('login').style.display = 'block'
             document.getElementById('tela_jogo').style.display = 'none'
             ws.close()
@@ -162,24 +156,18 @@
                 resetarTela()
               }, 500)
             }
-      
             atualizarImagemForca(6 - msg.tentativas)
           }
         }
-      
-        // Oculta login e mostra o jogo
         document.getElementById('login').style.display = 'none'
       }
-      
-      // Função chamada ao tentar adivinhar uma letra
+
       function tentarLetra() {
         const letra = document.getElementById('letra').value
         if (letra) {
-          // Envia a letra para o servidor
           ws.send(JSON.stringify({ type: 'letra', letra }))
           document.getElementById('letra').value = ''
       
-          // Incrementa tentativas erradas se a letra não estiver na palavra
           if (!msgGlobal.palavra.includes(letra)) {
             tentativasErradas++
           }
@@ -187,7 +175,6 @@
       }
       
       function atualizarImagemForca(tentativasErradas) {
-        // Array com as imagens em SVG da forca (em estágios)
         const forcaImagens = [
           `<svg width="110" height="174" viewBox="0 0 110 174" fill="none" xmlns="http://www.w3.org/2000/svg">
                                       <line x1="28.5" y1="172.991" x2="29.5" y2="2.99117" stroke="black" stroke-width="3" />
@@ -254,10 +241,8 @@
                                     </svg>`
         ]
       
-        // Seleciona a imagem correspondente à quantidade de erros
         const imagem = forcaImagens[Math.min(tentativasErradas, forcaImagens.length - 1)]
       
-        // Exibe a imagem atual da forca
         document.getElementById('forca_imagem').innerHTML = imagem
       }
       

@@ -52,9 +52,9 @@
       }
       
       #lista_jogadores {
-        list-style-type: none; /* remove os bullets */
-        padding-left: 0; /* remove o recuo à esquerda */
-        margin-left: 0; /* opcional: remove margem */
+        list-style-type: none; 
+        padding-left: 0; 
+        margin-left: 0; 
       }
     </style>
   </head>
@@ -62,7 +62,6 @@
   <body>
     <h1 id="titulo_jogador">Jogador 1 👤</h1>
 
-    <!-- Tela de login -->
     <div id="login">
       <p>Digite seu nome para entrar:</p>
       <input type="text" id="nome_input" placeholder="Seu nome" maxlength="20" autocomplete="off" />
@@ -75,11 +74,9 @@
         <ul id="lista_jogadores"></ul>
       </div>
 
-      <!-- Campo para digitar a palavra -->
       <input type="text" id="palavra" placeholder="Ex: abacaxi" maxlength="20" autocomplete="off" />
       <button id="btnEnviar" onclick="enviarPalavra()">Enviar</button>
 
-      <!-- Área que mostra o andamento do jogo do jogador 2 -->
       <h2 id="progressoTitle">Progresso do Jogo:</h2>
       <p id="progresso">Aguardando início do jogo...</p>
       <p id="letras_erradas"></p>
@@ -98,18 +95,14 @@
           alert('Digite um nome válido!')
           return
         }
-      
+    
         nomeUsuario = nome
       
-        // Troca o título para o nome real do jogador
         document.getElementById('titulo_jogador').textContent = nomeUsuario
-      
-        // Esconde login e mostra tela do jogo
         document.getElementById('login').style.display = 'none'
         document.getElementById('tela_jogo').style.display = 'block'
       
-        // Conecta WebSocket
-        ws = new WebSocket(`wss://${location.host}/ws/jogador1`)
+        ws = new WebSocket(`ws://${location.host}/ws/jogador1`)
       
         ws.onopen = () => {
           ws.send(JSON.stringify({ type: 'nome', nome: nomeUsuario }))
@@ -120,7 +113,6 @@
       
           if (data.type === 'error') {
             alert(data.msg)
-            // Mostrar a tela de login para tentar outro nome
             document.getElementById('login').style.display = 'block'
             document.getElementById('tela_jogo').style.display = 'none'
             ws.close()
@@ -153,9 +145,8 @@
               document.getElementById('letras_erradas').textContent = erros ? `Erradas: ${erros}` : ''
             }
       
-            const tentativasErradas = 6 - data.tentativas // se 6 é o total de tentativas permitidas
+            const tentativasErradas = 6 - data.tentativas
             atualizarImagemForca(tentativasErradas)
-      
             const resultadoEl = document.getElementById('resultado_jogo')
       
             if (data.status === 'jogador2_ganhou' || data.status === 'jogador3_ganhou') {
@@ -186,14 +177,10 @@
         const palavraInput = document.getElementById('palavra')
         const palavra = palavraInput.value.trim().toLowerCase()
       
-        // Validação: evitar envio de campo vazio ou apenas espaços
         if (palavra && /^[a-zA-ZçÇãõáéíóúâêîôûàèìòù]+$/i.test(palavra)) {
           ws.send(JSON.stringify({ type: 'palavra', palavra }))
       
-          // Desativa o botão para evitar múltiplos envios
           document.getElementById('btnEnviar').disabled = true
-      
-          // Mostra os traços no progresso
           document.getElementById('progresso').textContent = '_ '.repeat(palavra.length).trim()
           document.getElementById('letras_erradas').textContent = ''
         } else {
@@ -202,7 +189,6 @@
       }
       
       function atualizarImagemForca(tentativasErradas) {
-        // Array com as imagens em SVG da forca (em estágios)
         const forcaImagens = [
           `<svg width="110" height="174" viewBox="0 0 110 174" fill="none" xmlns="http://www.w3.org/2000/svg">
                                       <line x1="28.5" y1="172.991" x2="29.5" y2="2.99117" stroke="black" stroke-width="3" />
@@ -268,11 +254,9 @@
                                       <line x1="38.4157" y1="75.1885" x2="63.4157" y2="57.1885" stroke="#D9D9D9" stroke-width="2" />
                                     </svg>`
         ]
-      
-        // Seleciona a imagem correspondente à quantidade de erros
+    
         const imagem = forcaImagens[Math.min(tentativasErradas, forcaImagens.length - 1)]
       
-        // Exibe a imagem atual da forca
         document.getElementById('forca_imagem').innerHTML = imagem
       }
       

@@ -1,15 +1,11 @@
-# Importações
 from fastapi import FastAPI, WebSocket, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
-# Inicialização da aplicação
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
-
-# Variáveis globais do jogo
 palavra_secreta = ""
 letras_certas = []
 letras_erradas = []
@@ -23,25 +19,26 @@ jogador1_nome = None
 jogador2_nome = None
 jogador3_nome = None
 
-# Rota para jogador 1
 @app.get("/jogador1", response_class=HTMLResponse)
 async def jogador1(request: Request):
     return templates.TemplateResponse("jogador1.html", {"request": request})
 
-# Rota para jogador 2
 @app.get("/jogador2", response_class=HTMLResponse)
 async def jogador2(request: Request):
     return templates.TemplateResponse("jogador2.html", {"request": request})
 
-# WebSocket do jogador 1
+@app.get("/jogador3", response_class=HTMLResponse)
+async def jogador3(request: Request):
+    return templates.TemplateResponse("jogador3.html", {"request": request})
+
 @app.websocket("/ws/jogador1")
 async def websocket_jogador1(ws: WebSocket):
     global palavra_secreta, letras_certas, letras_erradas, tentativas, jogador1_ws, jogador1_nome
-    await ws.accept() # Aceita a conexão WebSocket
-    jogador1_ws = ws # Armazena a conexão
+    await ws.accept()
+    jogador1_ws = ws 
     try:
         while True:
-            data = await ws.receive_json() # Espera por uma mensagem JSON
+            data = await ws.receive_json()
             
             if data["type"] == "nome":
                 nome = data["nome"]
@@ -67,8 +64,8 @@ async def websocket_jogador1(ws: WebSocket):
             
             if data["type"] == "palavra":
                 resetar_jogo()
-                palavra_secreta = data["palavra"].lower() # Salva a palavra secreta em minúsculas
-                letras_certas = ["_" for _ in palavra_secreta] # Inicializa o jogo (reseta as variáveis)
+                palavra_secreta = data["palavra"].lower() 
+                letras_certas = ["_" for _ in palavra_secreta] 
                 letras_erradas = []
                 tentativas = 6
                 for jogador_ws in [jogador2_ws, jogador3_ws]:
@@ -81,7 +78,6 @@ async def websocket_jogador1(ws: WebSocket):
         jogador1_nome = None
         await enviar_lista_jogadores()
 
-# WebSocket do jogador 2
 @app.websocket("/ws/jogador2")
 async def websocket_jogador2(ws: WebSocket):
     global jogador2_ws, jogador2_nome
@@ -89,7 +85,7 @@ async def websocket_jogador2(ws: WebSocket):
     jogador2_ws = ws
     try:
         while True:
-            data = await ws.receive_json() # Recebe uma letra do jogador 2
+            data = await ws.receive_json() 
             
             if data["type"] == "nome":
                 nome = data["nome"]
@@ -120,11 +116,6 @@ async def websocket_jogador2(ws: WebSocket):
         nome = jogador2_nome or "Jogador2"
         jogador2_nome = None
         await enviar_lista_jogadores()
-
-
-@app.get("/jogador3", response_class=HTMLResponse)
-async def jogador3(request: Request):
-    return templates.TemplateResponse("jogador3.html", {"request": request})
 
 @app.websocket("/ws/jogador3")
 async def websocket_jogador3(ws: WebSocket):
@@ -174,7 +165,6 @@ async def processar_letra(letra: str, jogador: str):
     ganhou = False
     perdeu = False
 
-
     if letra in palavra_secreta:
         for i, l in enumerate(palavra_secreta):
             if l == letra:
@@ -204,13 +194,11 @@ async def processar_letra(letra: str, jogador: str):
             "status": status,
             "palavra": palavra_secreta
         }       
-
           
         for jogador_ws in [jogador1_ws, jogador2_ws, jogador3_ws]:
             if jogador_ws:
                 await jogador_ws.send_json(msg)
         return
-
 
     msg = {
         "type": "jogo",
@@ -221,18 +209,14 @@ async def processar_letra(letra: str, jogador: str):
         "palavra": palavra_secreta
     }
 
-    # Enviar atualização para todos
     for jogador_ws in [jogador1_ws, jogador2_ws, jogador3_ws]:
         if jogador_ws:
             await jogador_ws.send_json(msg)
             
-    
-
 def nome_ja_em_uso(nome: str) -> bool:
     nomes_atuais = [jogador1_nome, jogador2_nome, jogador3_nome]
     return nome in nomes_atuais
-
-            
+   
 async def enviar_lista_jogadores():
     nomes = [n for n in [jogador1_nome, jogador2_nome, jogador3_nome] if n]
     msg = {
