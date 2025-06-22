@@ -1,209 +1,272 @@
 <!DOCTYPE html>
 <html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Jogador 2 - Adivinhar</title>
+    <style>
+      body {
+        background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+        color: white;
+        font-family: 'Courier New', Courier, monospace;
+        text-align: center;
+        align-items: center;
+      }
+      
+      #letras_certas {
+        font-size: 40px;
+        margin-bottom: 20px;
+      }
+      
+      #letras_erradas {
+        color: red;
+        font-size: 30px;
+        margin-top: 20px;
+      }
+      
+      input[type='text'] {
+        font-size: 20px;
+        padding: 5px;
+        width: 50px;
+        text-align: center;
+      }
 
-<head>
-  <meta charset="UTF-8">
-  <title>Jogador 2 - Adivinhar</title>
-  <style>
-    body {
-      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-      color: white;
-      font-family: 'Courier New', Courier, monospace;
-      text-align: center;
-      align-items: center;
-    }
+      #input_nome[type='text'] {
+        font-size: 20px;
+        padding: 5px;
+        width: 250px;
+        text-align: center;
+      }
+      
+      button {
+        background: #abdcf1;
+        border: #abdcf1;
+        border-radius: 20px;
+        font-size: 18px;
+        margin-left: 10px;
+        padding: 5px 10px;
+        cursor: pointer;
+      }
+      
+      #lista_jogadores {
+        list-style-type: none; /* remove os bullets */
+        padding-left: 0; /* remove o recuo à esquerda */
+        margin-left: 0; /* opcional: remove margem */
+      }
+    </style>
+  </head>
 
-    #letras_certas {
-      font-size: 40px;
-      margin-bottom: 20px;
-    }
+  <body>
+    <h1 id="titulo_jogador">Jogador 2 🎮</h1>
 
-    #letras_erradas {
-      color: red;
-      font-size: 30px;
-      margin-top: 20px;
-    }
+    <!-- Tela de login -->
+    <div id="login">
+      <p>Digite seu nome para entrar:</p>
+      <input id="input_nome" type="text" id="nome_input" placeholder="Seu nome" autocomplete="off" />
+      <button onclick="entrarNoJogo()">Entrar</button>
+    </div>
 
-    input[type="text"] {
-      font-size: 20px;
-      padding: 5px;
-      width: 50px;
-      text-align: center;
-    }
+    <div id="aguardando_jogo" style="display:none;">
+      <p>Aguardando início do jogo...</p>
+    </div>
 
-    button {
-      background: #abdcf1;
-      border: #abdcf1;
-      border-radius: 20px;
-      font-size: 18px;
-      margin-left: 10px;
-      padding: 5px 10px;
-      cursor: pointer;
-    }
-  </style>
-</head>
+    <div style="margin-top: 30px;">
+      <strong>Jogadores conectados:</strong>
+      <ul id="lista_jogadores"></ul>
+    </div>
 
-<body>
-  <h1>Jogador 2 🎮</h1>
-  <div id="jogo" style="display:none;">
-    <p id="letras_certas">____</p>
-    <p id="tentativas">Tentativas: 6</p>
-    <p id="letras_erradas"></p>
-    <input type="text" id="letra" maxlength="1">
-    <button onclick="tentarLetra()">Tentar</button>
-    <div style="margin-top: 50px;" id="forca_imagem"></div>
-  </div>
+    <div id="jogo" style="display:none;">
+      <p id="letras_certas">____</p>
+      <p id="tentativas">Tentativas: 6</p>
+      <p id="letras_erradas"></p>
+      <input type="text" id="letra" maxlength="1" />
+      <button onclick="tentarLetra()">Tentar</button>
+      <div style="margin-top: 50px;" id="forca_imagem"></div>
+    </div>
 
-  <script>
-    // Estabelece uma conexão WebSocket com o backend (jogador 2)
-    const ws = new WebSocket(`ws://${location.host}/ws/jogador2`);
-
-    // Variável para contar tentativas erradas
-    let tentativasErradas = 0;
-
-    // Armazena a última mensagem recebida do servidor
-    let msgGlobal = null;
-
-    // Lida com as mensagens recebidas do servidor via WebSocket
-    ws.onmessage = (event) => {
-      const msg = JSON.parse(event.data);
-      msgGlobal = msg;
-
-      if (msg.type === "inicio") {
-        // Se o jogo estiver começando
-        resetarTela();
-        document.getElementById("jogo").style.display = "block";
-
-      } else if (msg.type === "jogo") {
-        // Atualiza letras corretas, erradas e tentativas
-        document.getElementById("letras_certas").textContent = msg.letras_certas.split('').join(' ');
-        document.getElementById("letras_erradas").textContent = msg.letras_erradas;
-        document.getElementById("tentativas").textContent = "Tentativas: " + msg.tentativas;
-
-        // Verifica se o jogador ganhou
-        if (msg.status === "jogador2_ganhou" || msg.status === "jogador3_ganhou") {
-          const vencedor = msg.status === "jogador2_ganhou" ? "Jogador 2" : "Jogador 3";
-          const perdeu = (vencedor === "Jogador 2" && location.pathname.includes("jogador3")) ||
-                        (vencedor === "Jogador 3" && location.pathname.includes("jogador2"));
+    <script>
+      let ws = null
+      let tentativasErradas = 0
+      let msgGlobal = null
+      
+      function entrarNoJogo() {
+        const nomeUsuario = document.getElementById('nome_input').value.trim()
+      
+        if (!nomeUsuario) {
+          alert('Digite um nome para continuar.')
+          return
+        }
+      
+        // Troca o título para o nome real do jogador
+        document.getElementById('titulo_jogador').textContent = nomeUsuario
+      
+        // Oculta login e mostra a tela de aguardando
+        document.getElementById('login').style.display = 'none'
+        document.getElementById('aguardando_jogo').style.display = 'block'
+      
+        // Conecta ao WebSocket
+        ws = new WebSocket(`wss://${location.host}/ws/jogador2`)
+      
+        ws.onopen = () => {
+          ws.send(JSON.stringify({ type: 'nome', nome: nomeUsuario }))
+        }
+      
+        ws.onmessage = (event) => {
+          const msg = JSON.parse(event.data)
+          msgGlobal = msg
+      
+          if (msg.type === 'error') {
+            alert(msg.msg)
+            // Mostrar a tela de login para tentar outro nome
+            document.getElementById('login').style.display = 'block'
+            document.getElementById('tela_jogo').style.display = 'none'
+            ws.close()
+            return
+          }
+      
+          if (msg.type === 'info') return
+      
+          if (msg.type === 'jogadores') {
+            const ul = document.getElementById('lista_jogadores')
+            ul.innerHTML = ''
+            msg.lista.forEach((nome) => {
+              const li = document.createElement('li')
+              li.textContent = nome
+              ul.appendChild(li)
+            })
+            return
+          }
+      
+          if (msg.type === 'inicio') {
+            resetarTela()
+            document.getElementById('aguardando_jogo').style.display = 'none'
+            document.getElementById('jogo').style.display = 'block'
+          } 
           
-          setTimeout(() => {
-            alert(perdeu
-              ? `😞 Você perdeu! ${vencedor} venceu!\nA palavra era: ${msg.palavra}`
-              : `🎉 Você venceu!\nA palavra era: ${msg.palavra}`);
-            document.getElementById("jogo").style.display = "none";
-            resetarTela();
-          }, 500);
+          else if (msg.type === 'jogo') {
+            document.getElementById('jogo').style.display = 'block'
+            document.getElementById('aguardando_jogo').style.display = 'none'
+      
+            document.getElementById('letras_certas').textContent = msg.letras_certas.split('').join(' ')
+            document.getElementById('letras_erradas').textContent = msg.letras_erradas
+            document.getElementById('tentativas').textContent = 'Tentativas: ' + msg.tentativas
+      
+            if (msg.status === 'jogador2_ganhou' || msg.status === 'jogador3_ganhou') {
+              const vencedor = msg.status === 'jogador2_ganhou' ? 'Jogador 2' : 'Jogador 3'
+              const perdeu = (vencedor === 'Jogador 2' && location.pathname.includes('jogador3')) || (vencedor === 'Jogador 3' && location.pathname.includes('jogador2'))
+              setTimeout(() => {
+                alert(perdeu ? `😞 Você perdeu! ${vencedor} venceu!\nA palavra era: ${msg.palavra}` : `🎉 Você venceu!\nA palavra era: ${msg.palavra}`)
+                document.getElementById('jogo').style.display = 'none'
+                resetarTela()
+              }, 500)
+            }
+      
+            atualizarImagemForca(6 - msg.tentativas)
+          }
         }
-
-
-
-        // Atualiza a imagem da forca com base nas tentativas erradas
-        atualizarImagemForca(6 - msg.tentativas);
+      
+        // Oculta login e mostra o jogo
+        document.getElementById('login').style.display = 'none'
       }
-    };
-
-    // Função chamada ao tentar adivinhar uma letra
-    function tentarLetra() {
-      const letra = document.getElementById("letra").value;
-      if (letra) {
-        // Envia a letra para o servidor
-        ws.send(JSON.stringify({ type: "letra", letra }));
-        document.getElementById("letra").value = "";
-
-        // Incrementa tentativas erradas se a letra não estiver na palavra
-        if (!msgGlobal.palavra.includes(letra)) {
-          tentativasErradas++;
+      
+      // Função chamada ao tentar adivinhar uma letra
+      function tentarLetra() {
+        const letra = document.getElementById('letra').value
+        if (letra) {
+          // Envia a letra para o servidor
+          ws.send(JSON.stringify({ type: 'letra', letra }))
+          document.getElementById('letra').value = ''
+      
+          // Incrementa tentativas erradas se a letra não estiver na palavra
+          if (!msgGlobal.palavra.includes(letra)) {
+            tentativasErradas++
+          }
         }
       }
-    }
-
-    // Atualiza o desenho da forca conforme o número de tentativas erradas
-    function atualizarImagemForca(tentativasErradas) {
-      // Array com as imagens em SVG da forca (em estágios)
-      const forcaImagens = [
-        `<svg width="110" height="174" viewBox="0 0 110 174" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <line x1="28.5" y1="172.991" x2="29.5" y2="2.99117" stroke="black" stroke-width="3" />
-        <line y1="171.5" x2="110" y2="171.5" stroke="black" stroke-width="5" />
-        <line x1="28" y1="1.5" x2="65" y2="1.5" stroke="black" stroke-width="3" />
-        <line x1="63.5" y1="3" x2="63.5" y2="14" stroke="black" stroke-width="3" />
-      </svg>`,
-        `<svg width="110" height="174" viewBox="0 0 110 174" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <line x1="28.5" y1="172.991" x2="29.5" y2="2.99117" stroke="black" stroke-width="3" />
-        <line y1="171.5" x2="110" y2="171.5" stroke="black" stroke-width="5" />
-        <line x1="28" y1="1.5" x2="65" y2="1.5" stroke="black" stroke-width="3" />
-        <line x1="63.5" y1="3" x2="63.5" y2="14" stroke="black" stroke-width="3" />
-        <ellipse cx="62.5" cy="28" rx="13.5" ry="14" fill="#D9D9D9" />
-      </svg>`,
-        `<svg width="110" height="174" viewBox="0 0 110 174" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <line x1="28.5" y1="172.991" x2="29.5" y2="2.99117" stroke="black" stroke-width="3" />
-        <line y1="171.5" x2="110" y2="171.5" stroke="black" stroke-width="5" />
-        <line x1="28" y1="1.5" x2="65" y2="1.5" stroke="black" stroke-width="3" />
-        <line x1="63.5" y1="3" x2="63.5" y2="14" stroke="black" stroke-width="3" />
-        <ellipse cx="62.5" cy="28" rx="13.5" ry="14" fill="#D9D9D9" />
-        <line x1="63" y1="42" x2="63" y2="116" stroke="#D9D9D9" stroke-width="2" />
-      </svg>`,
-        `<svg width="110" height="174" viewBox="0 0 110 174" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <line x1="28.5" y1="172.991" x2="29.5" y2="2.99117" stroke="black" stroke-width="3" />
-        <line y1="171.5" x2="110" y2="171.5" stroke="black" stroke-width="5" />
-        <line x1="28" y1="1.50001" x2="65" y2="1.50001" stroke="black" stroke-width="3" />
-        <line x1="63.5" y1="3.00001" x2="63.5" y2="14" stroke="black" stroke-width="3" />
-        <ellipse cx="62.5" cy="28" rx="13.5" ry="14" fill="#D9D9D9" />
-        <line x1="63" y1="42" x2="63" y2="116" stroke="#D9D9D9" stroke-width="2" />
-        <line x1="62.5547" y1="57.1679" x2="89.5547" y2="75.168" stroke="#D9D9D9" stroke-width="2" />
-      </svg>`,
-        `<svg width="110" height="174" viewBox="0 0 110 174" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <line x1="28.5" y1="172.991" x2="29.5" y2="2.99117" stroke="black" stroke-width="3" />
-        <line y1="171.5" x2="110" y2="171.5" stroke="black" stroke-width="5" />
-        <line x1="28" y1="1.50001" x2="65" y2="1.50001" stroke="black" stroke-width="3" />
-        <line x1="63.5" y1="3.00001" x2="63.5" y2="14" stroke="black" stroke-width="3" />
-        <ellipse cx="62.5" cy="28" rx="13.5" ry="14" fill="#D9D9D9" />
-        <line x1="63" y1="42" x2="63" y2="116" stroke="#D9D9D9" stroke-width="2" />
-        <line x1="62.5547" y1="57.1679" x2="89.5547" y2="75.168" stroke="#D9D9D9" stroke-width="2" />
-        <line x1="38.4157" y1="75.1885" x2="63.4157" y2="57.1885" stroke="#D9D9D9" stroke-width="2" />
-      </svg>`,
-        `<svg width="110" height="174" viewBox="0 0 110 174" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <line x1="62.5087" y1="115.139" x2="84.5087" y2="128.139" stroke="#D9D9D9" stroke-width="2" />
-        <line x1="28.5" y1="172.991" x2="29.5" y2="2.99117" stroke="black" stroke-width="3" />
-        <line y1="171.5" x2="110" y2="171.5" stroke="black" stroke-width="5" />
-        <line x1="28" y1="1.50001" x2="65" y2="1.50001" stroke="black" stroke-width="3" />
-        <line x1="63.5" y1="3.00001" x2="63.5" y2="14" stroke="black" stroke-width="3" />
-        <ellipse cx="62.5" cy="28" rx="13.5" ry="14" fill="#D9D9D9" />
-        <line x1="63" y1="42" x2="63" y2="116" stroke="#D9D9D9" stroke-width="2" />
-        <line x1="62.5547" y1="57.1679" x2="89.5547" y2="75.168" stroke="#D9D9D9" stroke-width="2" />
-        <line x1="38.4157" y1="75.1885" x2="63.4157" y2="57.1885" stroke="#D9D9D9" stroke-width="2" />
-      </svg>`,
-        `<svg width="110" height="174" viewBox="0 0 110 174" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <line x1="47.3706" y1="128.223" x2="63.4225" y2="115.223" stroke="#D9D9D9" stroke-width="2" />
-        <line x1="62.5087" y1="115.139" x2="84.5087" y2="128.139" stroke="#D9D9D9" stroke-width="2" />
-        <line x1="28.5" y1="172.991" x2="29.5" y2="2.99117" stroke="black" stroke-width="3" />
-        <line y1="171.5" x2="110" y2="171.5" stroke="black" stroke-width="5" />
-        <line x1="28" y1="1.50001" x2="65" y2="1.50001" stroke="black" stroke-width="3" />
-        <line x1="63.5" y1="3.00001" x2="63.5" y2="14" stroke="black" stroke-width="3" />
-        <ellipse cx="62.5" cy="28" rx="13.5" ry="14" fill="#D9D9D9" />
-        <line x1="63" y1="42" x2="63" y2="116" stroke="#D9D9D9" stroke-width="2" />
-        <line x1="62.5547" y1="57.1679" x2="89.5547" y2="75.168" stroke="#D9D9D9" stroke-width="2" />
-        <line x1="38.4157" y1="75.1885" x2="63.4157" y2="57.1885" stroke="#D9D9D9" stroke-width="2" />
-      </svg>`
-      ];
-
-      // Seleciona a imagem correspondente à quantidade de erros
-      const imagem = forcaImagens[Math.min(tentativasErradas, forcaImagens.length - 1)];
-
-      // Exibe a imagem atual da forca
-      document.getElementById("forca_imagem").innerHTML = imagem;
-    }
-
-    // Reinicia a interface do jogo
-    function resetarTela() {
-      document.getElementById("letras_certas").textContent = "____";
-      document.getElementById("letras_erradas").textContent = "";
-      document.getElementById("tentativas").textContent = "Tentativas: 6";
-      document.getElementById("letra").value = "";
-      document.getElementById("jogo").style.display = "none";
-      tentativasErradas = 0;
-      document.getElementById("forca_imagem").innerHTML = "";
-    }
-  </script>
-</body>
-
+      
+      function atualizarImagemForca(tentativasErradas) {
+        // Array com as imagens em SVG da forca (em estágios)
+        const forcaImagens = [
+          `<svg width="110" height="174" viewBox="0 0 110 174" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <line x1="28.5" y1="172.991" x2="29.5" y2="2.99117" stroke="black" stroke-width="3" />
+                                <line y1="171.5" x2="110" y2="171.5" stroke="black" stroke-width="5" />
+                                <line x1="28" y1="1.5" x2="65" y2="1.5" stroke="black" stroke-width="3" />
+                                <line x1="63.5" y1="3" x2="63.5" y2="14" stroke="black" stroke-width="3" />
+                              </svg>`,
+          `<svg width="110" height="174" viewBox="0 0 110 174" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <line x1="28.5" y1="172.991" x2="29.5" y2="2.99117" stroke="black" stroke-width="3" />
+                                <line y1="171.5" x2="110" y2="171.5" stroke="black" stroke-width="5" />
+                                <line x1="28" y1="1.5" x2="65" y2="1.5" stroke="black" stroke-width="3" />
+                                <line x1="63.5" y1="3" x2="63.5" y2="14" stroke="black" stroke-width="3" />
+                                <ellipse cx="62.5" cy="28" rx="13.5" ry="14" fill="#D9D9D9" />
+                              </svg>`,
+          `<svg width="110" height="174" viewBox="0 0 110 174" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <line x1="28.5" y1="172.991" x2="29.5" y2="2.99117" stroke="black" stroke-width="3" />
+                                <line y1="171.5" x2="110" y2="171.5" stroke="black" stroke-width="5" />
+                                <line x1="28" y1="1.5" x2="65" y2="1.5" stroke="black" stroke-width="3" />
+                                <line x1="63.5" y1="3" x2="63.5" y2="14" stroke="black" stroke-width="3" />
+                                <ellipse cx="62.5" cy="28" rx="13.5" ry="14" fill="#D9D9D9" />
+                                <line x1="63" y1="42" x2="63" y2="116" stroke="#D9D9D9" stroke-width="2" />
+                              </svg>`,
+          `<svg width="110" height="174" viewBox="0 0 110 174" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <line x1="28.5" y1="172.991" x2="29.5" y2="2.99117" stroke="black" stroke-width="3" />
+                                <line y1="171.5" x2="110" y2="171.5" stroke="black" stroke-width="5" />
+                                <line x1="28" y1="1.50001" x2="65" y2="1.50001" stroke="black" stroke-width="3" />
+                                <line x1="63.5" y1="3.00001" x2="63.5" y2="14" stroke="black" stroke-width="3" />
+                                <ellipse cx="62.5" cy="28" rx="13.5" ry="14" fill="#D9D9D9" />
+                                <line x1="63" y1="42" x2="63" y2="116" stroke="#D9D9D9" stroke-width="2" />
+                                <line x1="62.5547" y1="57.1679" x2="89.5547" y2="75.168" stroke="#D9D9D9" stroke-width="2" />
+                              </svg>`,
+          `<svg width="110" height="174" viewBox="0 0 110 174" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <line x1="28.5" y1="172.991" x2="29.5" y2="2.99117" stroke="black" stroke-width="3" />
+                                <line y1="171.5" x2="110" y2="171.5" stroke="black" stroke-width="5" />
+                                <line x1="28" y1="1.50001" x2="65" y2="1.50001" stroke="black" stroke-width="3" />
+                                <line x1="63.5" y1="3.00001" x2="63.5" y2="14" stroke="black" stroke-width="3" />
+                                <ellipse cx="62.5" cy="28" rx="13.5" ry="14" fill="#D9D9D9" />
+                                <line x1="63" y1="42" x2="63" y2="116" stroke="#D9D9D9" stroke-width="2" />
+                                <line x1="62.5547" y1="57.1679" x2="89.5547" y2="75.168" stroke="#D9D9D9" stroke-width="2" />
+                                <line x1="38.4157" y1="75.1885" x2="63.4157" y2="57.1885" stroke="#D9D9D9" stroke-width="2" />
+                              </svg>`,
+          `<svg width="110" height="174" viewBox="0 0 110 174" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <line x1="62.5087" y1="115.139" x2="84.5087" y2="128.139" stroke="#D9D9D9" stroke-width="2" />
+                                <line x1="28.5" y1="172.991" x2="29.5" y2="2.99117" stroke="black" stroke-width="3" />
+                                <line y1="171.5" x2="110" y2="171.5" stroke="black" stroke-width="5" />
+                                <line x1="28" y1="1.50001" x2="65" y2="1.50001" stroke="black" stroke-width="3" />
+                                <line x1="63.5" y1="3.00001" x2="63.5" y2="14" stroke="black" stroke-width="3" />
+                                <ellipse cx="62.5" cy="28" rx="13.5" ry="14" fill="#D9D9D9" />
+                                <line x1="63" y1="42" x2="63" y2="116" stroke="#D9D9D9" stroke-width="2" />
+                                <line x1="62.5547" y1="57.1679" x2="89.5547" y2="75.168" stroke="#D9D9D9" stroke-width="2" />
+                                <line x1="38.4157" y1="75.1885" x2="63.4157" y2="57.1885" stroke="#D9D9D9" stroke-width="2" />
+                              </svg>`,
+          `<svg width="110" height="174" viewBox="0 0 110 174" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <line x1="47.3706" y1="128.223" x2="63.4225" y2="115.223" stroke="#D9D9D9" stroke-width="2" />
+                                <line x1="62.5087" y1="115.139" x2="84.5087" y2="128.139" stroke="#D9D9D9" stroke-width="2" />
+                                <line x1="28.5" y1="172.991" x2="29.5" y2="2.99117" stroke="black" stroke-width="3" />
+                                <line y1="171.5" x2="110" y2="171.5" stroke="black" stroke-width="5" />
+                                <line x1="28" y1="1.50001" x2="65" y2="1.50001" stroke="black" stroke-width="3" />
+                                <line x1="63.5" y1="3.00001" x2="63.5" y2="14" stroke="black" stroke-width="3" />
+                                <ellipse cx="62.5" cy="28" rx="13.5" ry="14" fill="#D9D9D9" />
+                                <line x1="63" y1="42" x2="63" y2="116" stroke="#D9D9D9" stroke-width="2" />
+                                <line x1="62.5547" y1="57.1679" x2="89.5547" y2="75.168" stroke="#D9D9D9" stroke-width="2" />
+                                <line x1="38.4157" y1="75.1885" x2="63.4157" y2="57.1885" stroke="#D9D9D9" stroke-width="2" />
+                              </svg>`
+        ]
+      
+        // Seleciona a imagem correspondente à quantidade de erros
+        const imagem = forcaImagens[Math.min(tentativasErradas, forcaImagens.length - 1)]
+      
+        // Exibe a imagem atual da forca
+        document.getElementById('forca_imagem').innerHTML = imagem
+      }
+      
+      function resetarTela() {
+        document.getElementById('letras_certas').textContent = '____'
+        document.getElementById('letras_erradas').textContent = ''
+        document.getElementById('tentativas').textContent = 'Tentativas: 6'
+        document.getElementById('letra').value = ''
+        document.getElementById('jogo').style.display = 'none'
+        document.getElementById('forca_imagem').innerHTML = ''
+        document.getElementById('aguardando_jogo').style.display = 'block'
+      }
+    </script>
+  </body>
 </html>
