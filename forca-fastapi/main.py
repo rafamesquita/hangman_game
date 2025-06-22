@@ -166,9 +166,13 @@ async def websocket_jogador3(ws: WebSocket):
         
 async def processar_letra(letra: str, jogador: str):
     global tentativas, letras_certas, letras_erradas
+    
+    if "_" not in letras_certas or tentativas <= 0:
+        return
 
     ganhou = False
     perdeu = False
+
 
     if letra in palavra_secreta:
         for i, l in enumerate(palavra_secreta):
@@ -183,12 +187,29 @@ async def processar_letra(letra: str, jogador: str):
         ganhou = True
     elif tentativas <= 0:
         perdeu = True
+        
+    if ganhou or perdeu:
+        status = f"{jogador}_ganhou" if ganhou else "empate"
+    else:
+        status = "continua"
+        
+    if ganhou or perdeu:
+        status = f"{jogador}_ganhou" if ganhou else "empate"
+        msg = {
+            "type": "jogo",
+            "letras_certas": "".join(letras_certas),
+            "letras_erradas": "".join(letras_erradas),
+            "tentativas": tentativas,
+            "status": status,
+            "palavra": palavra_secreta
+        }       
 
-    status = "continua"
-    if ganhou:
-        status = f"{jogador}_ganhou"
-    elif perdeu:
-        status = "perdeu"
+          
+        for jogador_ws in [jogador1_ws, jogador2_ws, jogador3_ws]:
+            if jogador_ws:
+                await jogador_ws.send_json(msg)
+        return
+
 
     msg = {
         "type": "jogo",
@@ -203,6 +224,8 @@ async def processar_letra(letra: str, jogador: str):
     for jogador_ws in [jogador1_ws, jogador2_ws, jogador3_ws]:
         if jogador_ws:
             await jogador_ws.send_json(msg)
+            
+    
 
 def nome_ja_em_uso(nome: str) -> bool:
     nomes_atuais = [jogador1_nome, jogador2_nome, jogador3_nome]
@@ -221,3 +244,10 @@ async def enviar_lista_jogadores():
                 await ws.send_json(msg)
             except:
                 pass
+
+def resetar_jogo():
+    global palavra_secreta, letras_certas, letras_erradas, tentativas
+    palavra_secreta = ""
+    letras_certas = []
+    letras_erradas = []
+    tentativas = 6
