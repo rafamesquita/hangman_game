@@ -166,7 +166,7 @@
               document.getElementById('progresso').textContent = 'Aguardando início do jogo...'
               document.getElementById('letras_erradas').textContent = ''
               document.getElementById('forca_imagem').innerHTML = ''
-            } else if (data.status === 'perdeu') {
+            } else if (data.status === 'empate') {
               resultadoEl.textContent = 'Fim de jogo! Todos perderam!'
               document.getElementById('btnEnviar').disabled = false
               document.getElementById('palavra').value = ''
@@ -279,7 +279,7 @@
       function resetarTela() {
         document.getElementById('letras_certas').textContent = '____'
         document.getElementById('letras_erradas').textContent = ''
-        document.getElementById('tentativas').textContent = 'Tentativas: 6'
+        document.getElementById('tentativas').textContent = 'Erros restantes: 6'
         document.getElementById('letra').value = ''
         document.getElementById('jogo').style.display = 'none'
         document.getElementById('forca_imagem').innerHTML = ''

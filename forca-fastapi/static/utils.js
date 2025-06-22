@@ -76,7 +76,7 @@ function atualizarImagemForca(tentativasErradas) {
 function resetarTela() {
     document.getElementById("letras_certas").textContent = "____";
     document.getElementById("letras_erradas").textContent = "";
-    document.getElementById("tentativas").textContent = "Tentativas: 6";
+    document.getElementById("tentativas").textContent = "Erros restantes: 6";
     document.getElementById("letra").value = "";
     document.getElementById("jogo").style.display = "none";
     document.getElementById("forca_imagem").innerHTML = "";

@@ -66,6 +66,7 @@ async def websocket_jogador1(ws: WebSocket):
                     continue
             
             if data["type"] == "palavra":
+                resetar_jogo()
                 palavra_secreta = data["palavra"].lower() # Salva a palavra secreta em minúsculas
                 letras_certas = ["_" for _ in palavra_secreta] # Inicializa o jogo (reseta as variáveis)
                 letras_erradas = []
